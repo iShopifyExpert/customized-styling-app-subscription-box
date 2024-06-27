@@ -1,5 +1,5 @@
-{% assign csubscription = false %}
-{% for block in section.blocks %}{% case block.type %}{% when 'subscription' %}{% assign csubscription = true %}{% endcase %}{% endfor %}
-{% if csubscription == true %}
-   <a class="btn btn--primary {{ btn_atc_class }} custom-ajax-subscription-btn" data-loading-text="Adding to cart">{{ button_text }}</a>
-{% endif %}
+      {% assign csubscription = false %}
+      {% for block in section.blocks %}{% case block.type %}{% when 'subscription' %}{% assign csubscription = true %}{% endcase %}{% endfor %}
+      {% if csubscription == true %}
+         <a class="btn btn--primary {{ btn_atc_class }} custom-ajax-subscription-btn" data-loading-text="Adding to cart">{{ button_text }}</a>
+      {% endif %}
