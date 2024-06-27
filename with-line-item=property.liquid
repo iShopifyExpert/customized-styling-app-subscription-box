@@ -1,0 +1,320 @@
+{{ 'custom-subscription.css' | asset_url | stylesheet_tag }}
+{% assign totalservings = product.metafields.custom.number_of_meals | plus: 1 | minus: 1 %}
+
+{% for option in product.options_with_values %}
+{%- assign parentloop = option.name | handle -%}
+<fieldset>
+    <legend class="radio__legend lgnd">
+        <span class="radio__legend__label radio__legend__label--text flex">
+            <span class="radio__legend__option-name nme">CHOOSE YOUR FLAVORS</span>
+            <span><small class="radio__legend__value no-label"># of Bags</small></span>
+        </span>
+    </legend>
+    <div class="radio__fieldset fset">
+        <div class="radio__buttons btns">
+            <div class="radio__button btn">
+              {% assign line_items = 'Chocolate,Vanilla-Caramel' | split: ',' %}
+              {% for value in line_items %}
+              {%- assign value_id = value | handleize -%}
+              {%- assign value_image = value_id | append: '.png' | file_url -%}
+              {%- assign value_number_of_bags = product.metafields.custom.number_of_bags | default: 15 -%}
+              {%- assign value_price = product.price -%}
+              {%- assign value_compare_at_price = product.compare_at_price -%}
+              <div class="varient-box" data-name="{{ value | escape }}" data-price="{{ value_price | money }}">
+                 <input type="radio" class="varient-id-input" name="flavours" value="{{ value | escape }}" data-quantity="0" id="varient-id-input-{{value_id }}-{{ forloop.index0 }}" data-compareprice="{% if value_compare_at_price > value_price %}{{ value_compare_at_price | minus: value_price | times: 100.0 | divided_by: value_compare_at_price | round | append: '%' }}{% endif %}">
+                 <label class="radio__label varient__label lbl" for="varient-id-input-{{ value_id }}-{{ forloop.index0 }}">
+                    <div class="radio__item itm">
+                        <img src="{{ value_image }}" class="radio__img img">
+                        <div class="radio__item-info info">
+                            <div class="radio__item-heading head">{{ value | escape }}</div>
+                            <div class="radio__item-details dets" data-bag="{{ value_number_of_bags }}">{{ value_number_of_bags }} servings / bag</div>
+                        </div>
+                    </div>
+                    <div class="radio__button-group grp">
+                      {%- for i in (0..3) -%}
+                        <div class="quantity-box">
+                        <input type="radio" name="properties[{{ value }}]" value="{{ i }}" data-name="{{ value_id }}" data-weeks="{{ product.selling_plan_groups[0].selling_plan_group.selling_plans[0].id }}" id="{{ value_id }}-{{ parentloop }}-{{ i }}-radio-quantity"{% if forloop.first %} checked{% endif %}>
+                        <label for="{{ value_id }}-{{ parentloop }}-{{ i }}-radio-quantity" class="radio__button-style bstyle">{{ i }}</label>
+                        </div>
+                     {%- endfor -%}
+                    </div>
+                  </label>
+                </div>
+               {%- endfor -%}
+            </div>
+        </div>
+    </div>
+</fieldset>
+{% endfor %}
+<div class="subscription-section">
+  <p class="intro-title">DELIVERY FREQUENCY</p>
+  <!-- Subscribe & Save Option -->
+  {% for selling_plan_group in product.selling_plan_groups %}
+    {%- if forloop.index0 == 0 -%}
+    <div class="subscription-option" id="subscribe-option">
+        <input type="radio" id="subscribe" name="purchase-type" value="selling_plan" class="subscription-radio"{% if selling_plan_group.selling_plan_selected %} checked{% endif %}>
+        <label for="subscribe" class="subscription-label">
+            <div class="radio-fake"></div>
+            <div class="details">
+                <div class="title-and-popular">
+                    <span class="option-title">SUBSCRIBE & SAVE</span>
+                    <span class="most-popular">MOST POPULAR</span>
+                </div>
+                <div class="price-line">
+                    <div class="prices">
+                        <span class="original-price">{{ product.price | money }}</span>
+                        <span class="discounted-price">
+                          {% assign selling_discounted_price = product.price | money | remove: '$' %}{% assign sellingplanname = selling_plan_group.selling_plans[0].name | split: ', ' | last | remove: ' off' | remove: '$' %}
+                          {{ selling_discounted_price | minus: sellingplanname | abs  | prepend: '$' | append: '0 / BAG' }}
+                        </span>
+                    </div>
+                    <span class="serving-price" data-value="{{ totalservings }}">{% if totalservings > 0 %}ONLY __{% comment %}{{ selling_plan_group.selling_plans[0].price_adjustments[0].value | minus: product.price | abs | divided_by: totalservings | money }}{% endcomment %} / SERVING{% else %}Select Quantity{% endif %}</span>
+                </div>
+            </div>
+            <hr class="price-separator">
+            <div class="additional-info">
+                <div class="delivery-option">
+                    <span class="delivery-text">Delivery Every:</span>
+                    <div class="select-container{% if selling_plan_group.selling_plan_selected %} selected{% endif %}">
+                        <select class="delivery-select selected" aria-label="Select delivery schedule">
+                          {% for selling_plan in selling_plan_group.selling_plans %}
+                            {% assign selling_discount_amount = product.price | times: selling_plan.price_adjustments[0].value | divided_by: 100 %}{% assign selling_discounted_price = product.price | money | remove: '$' %}{% assign sellingplanname = selling_plan.name | split: ', ' | last | remove: ' off' | remove: '$' %}
+                            <option value="{{ selling_plan.id }}" data-value="{{ selling_plan.name | replace: 'Delivery every ', '' | split: ',' | first | remove: ' weeks' }}" data-multipackminusprice="{{ selling_discounted_price | minus: sellingplanname | abs }}" data-discountedprice="{{ selling_discounted_price | minus: sellingplanname | abs | times: 100 | money | append: ' / BAG' }}" data-originalprice="{{ product.price | money }}" data-percentage='{{ selling_plan.name | split: ', ' | last | remove: ' off' | remove: '.00' | remove: '$' }}' data-percentagenum='{{ selling_plan.name | split: ', ' | last | remove: ' off' | remove: '.00' | remove: '$' | remove: '%' }}' {% if selling_plan.selected %} selected{% endif %}>{% assign change_currency = cart.currency.symbol %}{{ selling_plan.name | replace: 'Delivery every ', '' | split: ',' | first }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <ul class="benefits-list">
+                    <li>Save ${{ selling_plan_group.selling_plans[0].name | split: ', ' | last | remove: ' off' | remove: '.00' | append: ' Per Bag' }}</li>
+                </ul>
+                <p class="see-more-link bags-per-weeks">On average, 2 bags last 4 weeks</p>
+            </div>
+        </label>
+    </div>
+    {% break %}
+    {% endif %}
+  {% endfor %}
+  {% unless product.requires_selling_plan %}
+    <!-- One-Time Purchase Option -->
+    <div class="subscription-option{% unless product.selected_selling_plan %} selected{% endunless %}" id="one-time-option">
+        <input type="radio" id="one-time" name="purchase-type" value="one_time_purchase" class="subscription-radio" {% unless product.selected_selling_plan %}checked{% endunless %}>
+        <label for="one-time" class="subscription-label">
+            <div class="radio-fake"></div>
+            <div class="details">
+                <span class="option-title">{{ 'products.product.one_time_purchase' | t }}</span>
+                <div class="price-line">
+                    <span class="full-price">{{ product.price | money | append: ' / BAG' }}</span>
+                    <span class="serving-price">{% if totalservings > 0 %}ONLY __{% comment %}{{ selling_plan_group.selling_plans[0].price_adjustments[0].value | minus: product.price | abs | divided_by: totalservings | money }}{% endcomment %} / SERVING{% else %}Select Quantity{% endif %}</span>
+                </div>
+            </div>
+        </label>
+    </div>
+   {% endunless %}
+</div>
+
+<div class="savings-box">
+    <p class="savings-notice total">Total Savings: <span class="savings-b">$10</span></p>
+    <ul class="benefits-list savings">
+        <li class="subscription-discount">Subscription Discount: <span class="savings-b">${{ product.selling_plan_groups[0].selling_plans[0].name | split: ', ' | last | remove: ' off' | remove: '.00' | remove: '$' }}</span></li>
+        <li class="multipack-discount">Multipack Discount: <span class="savings-b">$0</span></li>
+        <li class="free-ship">Free Shipping: <span class="savings-b">Add {{ product.price | minus: 100 }} for free shipping</span></li>
+    </ul>
+</div>
+<style>#shopify-block-subscriptions_app_block_fDYfKX {display:none;}</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script>
+$(document).ready(function() {
+  var Shopify=Shopify||{};Shopify.money_format="$",Shopify.formatMoney=function(a,o){"string"==typeof a&&(a=a.replace(".",""));var e="",t=/\{\{\s*(\w+)\s*\}\}/,r=o||this.money_format;function n(a,o){return void 0===a?o:a}function i(a,o,e,t){if(o=n(o,2),e=n(e,","),t=n(t,"."),isNaN(a)||null==a)return 0;var r,i=(a=(a/100).toFixed(o)).split(".");return i[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g,"$1"+e)+(i[1]?t+i[1]:"")}switch(r.match(t)[1]){case"amount":e=i(a,2);break;case"amount_no_decimals":e=i(a,0);break;case"amount_with_comma_separator":e=i(a,2,".",",");break;case"amount_no_decimals_with_comma_separator":e=i(a,0,".",",")}return r.replace(t,e)};
+  function updateDeliveryFrequency(totalQuantity) {
+    var deliverySelect = $('.delivery-select');
+    if (totalQuantity > 0) {
+      var targetValue = totalQuantity * 2;
+    } else {
+      var targetValue = 2;
+    }
+    var optionToSelect = deliverySelect.find('option[data-value="'+targetValue+'"]');
+    if (optionToSelect.length > 0) {
+      deliverySelect.val(optionToSelect.val()).trigger('change');
+    }
+  }
+  function calculateTotalQuantity() {
+    var totalQuantity = 0;
+    $('.varient-box .radio__button-group .quantity-box input[type="radio"]:checked').each(function() {
+      totalQuantity += parseInt($(this).val());
+    });
+    return totalQuantity;
+  }
+  function updateSavings() {
+    var mainprice = {{product.price}};
+    var maincompareprice = {{product.compare_at_price}};
+    var totalQuantity = calculateTotalQuantity();
+    
+    updateDeliveryFrequency(totalQuantity);
+    $('product-form form').find('input[name="quantity"]').val(totalQuantity);
+    var checkedOption = $('.subscription-section input[type="radio"][name="purchase-type"]:checked').val();
+    if (checkedOption == 'selling_plan') {
+      var percentage = $('.delivery-select').find('option:selected').data('percentage');
+      var percentagenum = $('.delivery-select').find('option:selected').data('percentagenum');
+      if (totalQuantity > 1) {
+        $('.bags-per-weeks').text('On average, ' + totalQuantity + ' bags last ' + totalQuantity * 2 + ' weeks');
+        var multipackduscount = percentagenum / 2;
+        var multipackduscountvalue = totalQuantity * multipackduscount;
+        var subscriptionduscountvalue = totalQuantity * percentagenum;
+        var totalduscount = subscriptionduscountvalue + multipackduscount;
+        var totalduscountvalue = subscriptionduscountvalue + multipackduscountvalue;
+        var totalcrossduscountvalue = subscriptionduscountvalue;
+        var totalsaleprice = mainprice * totalQuantity;
+        var totalcrossprice = maincompareprice * totalQuantity;
+        var multipackminusPrice = $('.delivery-select option:selected').data('multipackminusprice');
+        var finalmultipackminusPrice = multipackminusPrice - multipackduscount;
+        var finalmainPrice = multipackduscount * 100;
+        $('.savings-notice.total span, .product__price--off span[data-price-off-amount]').text('$' + totalduscountvalue);
+        $('.product__price--off').show();
+        $('.subscription-discount span').text('$' + subscriptionduscountvalue);
+        $('.multipack-discount span').text('$' + multipackduscountvalue);
+        $('.subscription-option .discounted-price').text(Shopify.formatMoney(finalmultipackminusPrice * 100, window.theme.moneyFormat)+' / BAG');
+        $('#one-time-option .full-price').text(Shopify.formatMoney(mainprice - finalmainPrice, window.theme.moneyFormat)+' / BAG');
+        $('#subscribe-option .serving-price').text('ONLY '+Shopify.formatMoney(finalmultipackminusPrice * 100 / 15, window.theme.moneyFormat)+' / SERVING');
+        $('#one-time-option .serving-price').text('ONLY '+Shopify.formatMoney(mainprice / 15, window.theme.moneyFormat)+' / SERVING');
+        $('.product__price--sale').text(Shopify.formatMoney(totalsaleprice - totalduscountvalue * 100, window.theme.moneyFormat));
+        $('.product__price--strike').text(Shopify.formatMoney(totalcrossprice - totalcrossduscountvalue * 100, window.theme.moneyFormat));
+        if (totalsaleprice >= 10000) {
+          $('.free-ship span').text('You got free shipping');
+        } else {
+          $('.free-ship span').text('Add '+Shopify.formatMoney(totalsaleprice - totalduscountvalue * 100, window.theme.moneyFormat)+' for free shipping');
+        }
+      } else {
+        var subscriptionduscountvalue = 1 * percentagenum;
+        var totalduscount = percentagenum;
+        var totalduscountvalue = subscriptionduscountvalue * 100;
+        var totalsaleprice = mainprice * totalQuantity;
+        var multipackminusPrice = $('.delivery-select option:selected').data('multipackminusprice');
+        $('.savings-notice.total span, .product__price--off span[data-price-off-amount]').text('$' +  totalduscount);
+        $('.product__price--off').show();
+        $('.subscription-discount span').text('$' + percentagenum);
+        $('.multipack-discount span').text('$0');
+        $('.subscription-option .discounted-price').text(Shopify.formatMoney(multipackminusPrice * 100, window.theme.moneyFormat)+' / BAG');
+        $('#one-time-option .full-price').text(Shopify.formatMoney(mainprice, window.theme.moneyFormat)+' / BAG');
+        $('#subscribe-option .serving-price').text('ONLY '+Shopify.formatMoney(multipackminusPrice * 100 / 15, window.theme.moneyFormat)+' / SERVING');
+        $('#one-time-option .serving-price').text('ONLY '+Shopify.formatMoney(mainprice / 15, window.theme.moneyFormat)+' / SERVING');
+        $('.product__price--sale').text(Shopify.formatMoney(mainprice - totalduscountvalue, window.theme.moneyFormat));
+        $('.product__price--strike').text(Shopify.formatMoney(maincompareprice - totalduscountvalue, window.theme.moneyFormat));
+        $('.bags-per-weeks').text('On average, ' + 1 + ' bags last ' + 1 * 2 + ' weeks');
+        var totalfreeshipping = mainprice - totalduscountvalue;
+        if (totalsaleprice >= 10000) {
+          $('.free-ship span').text('You got free shipping');
+        } else {
+          $('.free-ship span').text('Add '+Shopify.formatMoney(10000 - totalfreeshipping, window.theme.moneyFormat)+' for free shipping');
+        }
+      }
+        var subscriptionduscountvalue = 1 * percentagenum;
+        var totalduscount = percentagenum;
+        var totalduscountvalue = subscriptionduscountvalue * 100;
+        var totalsaleprice = mainprice * totalQuantity;
+      if (totalQuantity == 0) {
+        if (totalsaleprice >= 10000) {
+          $('.free-ship span').text('You got free shipping');
+        } else {
+          $('.free-ship span').text('Add $100 for free shipping');
+        }
+      }
+      if (totalQuantity == 0) {
+        var subscriptionduscountvalue = 1 * percentagenum;
+        var totalduscountvalue = subscriptionduscountvalue * 100;
+        $('.product__price--sale').text(Shopify.formatMoney(mainprice - totalduscountvalue, window.theme.moneyFormat) );
+        $('.product__price--strike').text(Shopify.formatMoney(maincompareprice - totalduscountvalue, window.theme.moneyFormat));
+      }
+    }
+  }
+
+  $(document).on('change', '.varient-box .varient-id-input', function() {
+    $('.varient-box').removeClass('selected');
+    $(this).parents('.varient-box').addClass('selected');
+  });
+
+  $(document).on('change', '.varient-box .radio__button-group .quantity-box input[type="radio"]', function() {
+    var selectedquantity = $(this).val();
+    $('.varient-box').removeClass('selected');
+    $(this).parents('.varient-box').find('.varient-id-input').attr('data-quantity', selectedquantity);
+    if (selectedquantity > 0) {
+      $('product-form form #lineitemproperty-'+$(this).attr("data-name")).remove();
+      $('product-form form').append('<input type="hidden" id="lineitemproperty-'+$(this).attr('data-name')+'" name="'+$(this).attr('name')+'" value="'+selectedquantity+'">')
+    } else {
+       $('product-form form #lineitemproperty-'+$(this).attr("data-name")).remove();
+    }
+    updateSavings();
+  });
+
+  $(document).on('change', '.subscription-section input[type="radio"][name="purchase-type"]', function() {
+    var mainprice = {{product.price}};
+    var maincompareprice = {{product.compare_at_price}};
+    var checkedOption = $(this).val();
+    var totalQuantity = calculateTotalQuantity();
+    $('.subscription-section .subscription-option').removeClass('selected');
+    $(this).parents('.subscription-option').addClass('selected');
+    if (checkedOption == 'one_time_purchase') {
+      $('.shopify_subscriptions_app_block_label input[data-radio-type="'+checkedOption+'"]').parents('label').trigger('click');
+      var percentagenum = $('.delivery-select').find('option:selected').data('percentagenum');
+      if (totalQuantity > 1) {
+        var multipackduscount = percentagenum / 2;
+        var multipackduscountvalue = multipackduscount * totalQuantity;
+        var multipackduscountvalue2 = percentagenum * totalQuantity;
+        var totalsaleprice = mainprice * totalQuantity;
+        var totalcrossprice = maincompareprice * totalQuantity;
+        var subscriptionduscountvalue = totalQuantity * percentagenum;
+        var totalduscountvalue = subscriptionduscountvalue + multipackduscountvalue;
+        $('.savings-notice.total span, .product__price--off span[data-price-off-amount]').text('$' + multipackduscountvalue);
+        $('.product__price--off, .product__price--strike').show();
+        $('.subscription-discount span').text('$0');
+        $('.multipack-discount span').text('$' + multipackduscountvalue);
+        $('.product__price--sale').text(Shopify.formatMoney(totalsaleprice - multipackduscountvalue * 100, window.theme.moneyFormat));
+        $('.product__price--strike').text(Shopify.formatMoney(totalcrossprice - multipackduscountvalue2 * 100, window.theme.moneyFormat));
+        if (totalsaleprice >= 10000) {
+          $('.free-ship span').text('You got free shipping');
+        } else {
+          $('.free-ship span').text('Add '+Shopify.formatMoney(totalsaleprice - totalduscountvalue * 100, window.theme.moneyFormat)+' for free shipping');
+        }
+      } else {
+        $('.savings-notice.total span, .product__price--off span[data-price-off-amount]').text('$' +  percentagenum);
+        $('.product__price--off').show();
+        $('.subscription-discount span').text('$0');
+        $('.multipack-discount span').text('$0');
+        $('.savings-notice.total span, .product__price--off span[data-price-off-amount]').text('$0');
+        $('.product__price--off, .product__price--strike').hide();
+        $('.product__price--sale').text(Shopify.formatMoney(mainprice, window.theme.moneyFormat));
+        var subscriptionduscountvalue = 1 * percentagenum;
+        var totalduscountvalue = subscriptionduscountvalue * 100;
+        var totalfreeshipping = maincompareprice - totalduscountvalue;
+        if (totalsaleprice >= 10000) {
+          $('.free-ship span').text('You got free shipping');
+        } else {
+          $('.free-ship span').text('Add '+Shopify.formatMoney(10000 - totalfreeshipping, window.theme.moneyFormat)+' for free shipping');
+        }
+      }
+    } else if (checkedOption == 'selling_plan') {
+      var deliverySelected = $('.delivery-select').val();
+      $('.shopify_subscriptions_app_block_label input[data-radio-type="'+checkedOption+'"][data-selling-plan-id="'+deliverySelected+'"]').parents('label').trigger('click');
+      $('.product__price--strike').show();
+      updateSavings();
+    }
+  });
+
+  $(document).on('change', '.delivery-select', function() {
+    var deliverySelected = $(this).val();
+    $('.subscription-section input[type="radio"][name="purchase-type"][value="selling_plan"]').trigger('click');
+    var checkedOption = $('.subscription-section input[type="radio"][name="purchase-type"]:checked').val();
+    $('.subscription-section .subscription-option').removeClass('selected');
+    $(this).parents('.subscription-option').addClass('selected');
+    $('.shopify_subscriptions_app_block_label input[data-radio-type="'+checkedOption+'"][data-selling-plan-id="'+deliverySelected+'"]').parents('label').trigger('click');
+    var discountedPrice = $(this).find('option:selected').data('discountedprice');
+    var multipackminusPrice = $(this).find('option:selected').data('multipackminusprice');
+    var originalPrice = $(this).find('option:selected').data('originalprice');
+    var percentage = $(this).find('option:selected').data('percentage');
+    var percentagenum = $(this).find('option:selected').data('percentagenum');
+    $(this).parents('.subscription-option').find('.original-price').text(originalPrice);
+    /*$(this).parents('.subscription-option').find('.discounted-price').text(multipackminusPrice);*/
+    $(this).parents('.subscription-option').find('.benefits-list li').text('Save $' + percentage + ' Per Bag');
+  });
+  $('.subscription-section input[type="radio"][name="purchase-type"][value="selling_plan"]').parents('.subscription-option').find('label').trigger('click');
+});
+</script>
